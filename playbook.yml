@@ -1,0 +1,22 @@
+- name: Setup Docker
+  hosts: all
+  become: yes
+  roles:
+    - docker_setup
+
+- name: Deploy MySQL Docker Container
+  hosts: db-server
+  become: yes
+  vars_files:
+    - group_vars/all/vault.yml
+  roles:
+    - database
+
+- name: Deploy Webserver
+  hosts: webserver
+  become: yes
+  vars_files:
+    - group_vars/all/vault.yml
+  roles:
+    - webserver
+

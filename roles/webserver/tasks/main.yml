@@ -1,0 +1,93 @@
+- name: Add GitHub to known hosts
+  ansible.builtin.known_hosts:
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+    path: "{{ ansible_user_dir }}/.ssh/known_hosts"
+
+- name: Clone the reserveat repository
+  ansible.builtin.git:
+    repo: 'git@github.com:aykhanmv/reserveat.git'
+    dest: /root/reserveat
+    clone: yes
+    update: yes
+
+- name: Ensure python3-venv is installed
+  ansible.builtin.package:
+    name: python3-venv
+    state: present
+  become: true
+
+- name: Ensure required development packages are installed
+  ansible.builtin.package:
+    name:
+      - python3-dev
+      - default-libmysqlclient-dev
+      - build-essential
+      - pkg-config
+    state: present
+  become: true
+
+- name: Install Nginx
+  ansible.builtin.package:
+    name: nginx
+    state: present
+  become: true
+
+- name: Remove default Nginx site configuration
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  become: true
+
+- name: Configure Nginx for the application
+  ansible.builtin.template:
+    src: roles/webserver/templates/wapp
+    dest: /etc/nginx/sites-enabled/wapp
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: Reload Nginx to apply new configuration
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+  become: true
+
+- name: Allow HTTP and SSH through UFW
+  ansible.builtin.shell:
+    cmd: |
+      sudo ufw allow OpenSSH
+      sudo ufw allow 80/tcp
+      echo y | ufw enable
+  become: true
+
+- name: Remove any running Docker containers
+  ansible.builtin.shell:
+    cmd: docker rm -f $(docker ps -aq)
+    chdir: /root/reserveat
+  become: true
+
+- name: Create virtual environment
+  ansible.builtin.shell:
+    cmd: python3 -m venv /root/reserveat/.venv
+    creates: /root/reserveat/.venv
+    chdir: /root/reserveat
+
+- name: Install dependencies in virtual environment
+  ansible.builtin.pip:
+    requirements: /root/reserveat/requirements.txt
+    virtualenv: /root/reserveat/.venv
+
+- name: Create .env file with variables from vault
+  ansible.builtin.template:
+    src: roles/webserver/templates/env_file.j2
+    dest: /root/reserveat/.env
+    owner: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Run docker compose up to start the application
+  ansible.builtin.shell:
+    cmd: docker compose up -d --build
+    chdir: /root/reserveat
+  become: true

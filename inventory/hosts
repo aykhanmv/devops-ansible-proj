@@ -1,0 +1,5 @@
+[webserver]
+web-server ansible_host=webserver_ip_adrs ansible_user=root
+
+[database]
+db-server ansible_host=database_ip_adrs ansible_user=root

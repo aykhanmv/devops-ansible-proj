@@ -1,0 +1,30 @@
+- name: Ensure Docker is installed
+  ansible.builtin.package:
+    name: docker-ce
+    state: present
+
+- name: Copy docker-compose.yml file to remote server
+  ansible.builtin.template:
+    src: roles/database/templates/docker-compose.yml
+    dest: /root/docker-compose.yml
+    owner: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Copy init.sql to the remote server
+  ansible.builtin.copy:
+    src: roles/database/templates/init.sql
+    dest: /root/init.sql
+    owner: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Stop and remove existing mysql_db container if it exists
+  ansible.builtin.shell:
+    cmd: |
+      docker ps -q -f name=mysql_db | xargs -r docker stop
+      docker ps -aq -f name=mysql_db | xargs -r docker rm
+    chdir: /root
+
+- name: Run docker compose up
+  ansible.builtin.shell:
+    cmd: docker compose up -d --build
+    chdir: /root

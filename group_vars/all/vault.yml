@@ -1,0 +1,7 @@
+mysql_host: database_ip_adrs
+mysql_db_name: reserveat
+mysql_user: webadmin
+mysql_user_password: nv9384v09283t298vc0um2839t
+secret_key: reserveat
+mysql_root: root
+mysql_root_password: v9387vb298ncv289672bv89238
